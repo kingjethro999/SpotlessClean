@@ -59,8 +59,8 @@ export function NewRequestForm({ userId }: { userId: string }) {
   };
 
   const updateItem = (id: string, field: string, value: any) => {
-    setItems(
-      items.map((item) =>
+    setItems((prevItems) =>
+      prevItems.map((item) =>
         item.id === id
           ? {
             ...item,
