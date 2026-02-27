@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,15 @@ export function NewRequestForm({ userId }: { userId: string }) {
   const [pickupDate, setPickupDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [categories, setCategories] = useState<{ id: string; name: string; base_price: number }[]>([]);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      const { data } = await supabase.from('item_categories').select('*').order('name');
+      if (data) setCategories(data);
+    }
+    fetchCategories();
+  }, [supabase]);
 
   const addItem = () => {
     const newItem: ClothingItem = {
@@ -185,13 +194,28 @@ export function NewRequestForm({ userId }: { userId: string }) {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                 <div>
                   <label className="block text-xs font-medium text-amber-900 mb-1">Item Type</label>
-                  <Input
-                    type="text"
+                  <select
                     value={item.type}
-                    onChange={(e) => updateItem(item.id, 'type', e.target.value)}
-                    placeholder="e.g., Shirt, Pants"
+                    onChange={(e) => {
+                      const selectedCat = categories.find(c => c.name === e.target.value);
+                      if (selectedCat) {
+                        updateItem(item.id, 'type', selectedCat.name);
+                        updateItem(item.id, 'cost_per_unit', selectedCat.base_price);
+                      } else {
+                        updateItem(item.id, 'type', '');
+                        updateItem(item.id, 'cost_per_unit', 0);
+                      }
+                    }}
                     required
-                  />
+                    className="w-full px-3 py-2 border border-amber-300 rounded-md bg-white text-amber-900 placeholder-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm h-10"
+                  >
+                    <option value="" disabled>Select item type</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-amber-900 mb-1">Quantity</label>
@@ -201,18 +225,14 @@ export function NewRequestForm({ userId }: { userId: string }) {
                     value={item.quantity}
                     onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
                     required
+                    className="h-10"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-amber-900 mb-1">Cost (₦)</label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="100"
-                    value={item.cost_per_unit}
-                    onChange={(e) => updateItem(item.id, 'cost_per_unit', e.target.value)}
-                    required
-                  />
+                  <label className="block text-xs font-medium text-amber-900 mb-1">Unit Cost (₦)</label>
+                  <div className="w-full px-3 py-2 text-amber-900 font-semibold flex items-center h-10">
+                    {item.cost_per_unit > 0 ? `₦${item.cost_per_unit.toLocaleString()}` : '—'}
+                  </div>
                 </div>
                 <div className="flex items-end">
                   <button
